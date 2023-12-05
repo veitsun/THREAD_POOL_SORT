@@ -1,5 +1,5 @@
 # thread-pool-sort
-线程池海量数据排序
+线程池排序
 
 线程池参考：[thread-pool](https://github.com/mtrebi/thread-pool)
 
