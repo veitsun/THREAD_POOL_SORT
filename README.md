@@ -16,7 +16,7 @@ g++ -pthread *.cpp -o sort      #编译源码
 3. create tmp dir: /tmp/sort.
 4. sort file chunk in /tmp/sort.
 5. sort partial sorted file chunk.
-9      #最终结果存在/tmp/sort文件夹下前缀为9的文件里，意为总计归并了9次
-6. copy result to sorted.txt.
+9      #最终结果存在/tmp/sort文件夹下前缀为这一行的数字的文件里，此处为9意为总计归并了9次
+6. copy result to sorted.txt.   #TODO
 ```
 
