@@ -21,36 +21,21 @@
 
 using namespace std;
 
-void delete_directory(const char *path) {
-  DIR *d = opendir(path);
-  size_t path_len = strlen(path);
-  int result = 0;
+void delete_directory(const char *path);
+void merge(int * a, int beg, int med, int end);
+void merge_sort(int * a, int beg, int end);
+void copy_prefix_file(const char *path, int prefix, const char *dst_name);
+int count_lines(char *filename, FILE *filelist);
+int get_file_list(char *path, const char *filelist);
+int merge_two_file(char *file1, char *file2, char *output);
+int count_prefix(int prefix, const char *dir_path);
+char merge_orderd_files(int prefix, const char *dir_path);
+int sort_worker(char *name, int start_line, long offset, int lines, char *dst_name);
+void sort_list(const char *list_name, const char *dst_dir);
 
-  if (d) {
-    struct dirent *dir;
-    while ((dir = readdir(d)) != NULL) {
-      if (strcmp(dir->d_name, ".") != 0 && strcmp(dir->d_name, "..") != 0) {
-        char *file_path = (char*)malloc(path_len + strlen(dir->d_name) + 2);
-        if (file_path) {
-          snprintf(file_path, path_len + strlen(dir->d_name) + 2, "%s/%s", path, dir->d_name);
-          if (dir->d_type == DT_DIR) {
-            delete_directory(file_path);
-          } else {
-            result = remove(file_path);
-            if (result != 0) {
-              printf("Error deleting file: %s\n", file_path);
-            }
-          }
-          free(file_path);
-        }
-      }
-    }
-    closedir(d);
-  }
-  rmdir(path); 
-}
-
-void merge(int * a, int beg, int med, int end){
+// Ordinary merge function for merge sort
+void merge(int * a, int beg, int med, int end) 
+{
   int left = beg, right = med;
   size_t sz = end - beg;
   int temp[sz];
@@ -64,7 +49,9 @@ void merge(int * a, int beg, int med, int end){
   memcpy(a + beg, temp, sz * sizeof(int));
 }
 
-void merge_sort(int * a, int beg, int end){
+// Ordinary merge_sort function for merge sort
+void merge_sort(int * a, int beg, int end) 
+{
   if(end - beg <= 1)
     return;
   int med = beg + (end - beg) / 2;
@@ -73,49 +60,8 @@ void merge_sort(int * a, int beg, int end){
   merge(a, beg, med, end);
 }
 
-void copy_prefix_file(const char *path, int prefix, const char *dst_name) {
-  DIR *dp;
-  struct dirent *ep;
-  char buffer[LINE_BUF_SIZE];
-  char path_buffer[PATH_BUF_SIZE];
-  sprintf(buffer, "%d", prefix);
-  size_t sz = strlen(buffer);
-  FILE *dst_file, *src_file;
-
-  if(!path || prefix < 0 || !dst_name)
-    return;
-
-  dp = opendir(path);
-  if(!dp) {
-    perror("couldn't open the directory");
-    return;
-  }
-
-  dst_file = fopen(dst_name, "w");
-  if(!dst_file) {
-    closedir(dp);
-    perror("couldn't open the file");
-    return;
-  }
-
-  while((ep = readdir(dp)))
-    if(!strncmp(buffer, ep->d_name, sz)) {
-      sprintf(path_buffer, "%s/", path);
-      strcat(path_buffer, ep->d_name);
-      src_file = fopen(path_buffer, "r");
-      if(src_file) {
-        while (fgets(buffer, LINE_BUF_SIZE, src_file) != NULL)
-          fprintf(dst_file, "%s", buffer);
-        fclose(src_file);
-      }
-      break;
-    }
-
-  closedir(dp);
-  fclose(dst_file);
-}
-
-int count_lines(char *filename, FILE *filelist)
+// Cont line and offset of file filename, and write record to filelist
+int count_lines(char *filename, FILE *filelist) 
 {
   FILE *file = fopen(filename, "r");
   if (file == NULL) {
@@ -128,17 +74,165 @@ int count_lines(char *filename, FILE *filelist)
   long offset = ftell(file);
 
   while (fgets(buffer, LINE_BUF_SIZE, file) != NULL) {
-    if(!(lines % LINE_GROUPS)) {
-      fprintf(filelist, "%s\t%d\t%ld\n", filename, lines, offset);
+    if(!(lines % LINE_GROUPS)) {  // Write the record every serval line meanwhile 
+                                  // separate the file to line chunks
+      fprintf(filelist, "%s\t%d\t%ld\n", filename, lines, offset);  // Write the record
     }
     lines++;
-    offset = ftell(file);
+    offset = ftell(file); // Obtain offset of current position
   }
   fclose(file);
   return lines;
 }
 
-int count_prefix(int prefix, const char *dir_path)
+// Delete a directory and all files in it
+void delete_directory(const char *path) 
+{
+  DIR *d = opendir(path);
+  size_t path_len = strlen(path);
+  int result = 0;
+
+  if (d) {
+    struct dirent *dir;
+    while ((dir = readdir(d)) != NULL) {
+      // Except . and ..
+      if (strcmp(dir->d_name, ".") != 0 && strcmp(dir->d_name, "..") != 0) {
+        char *file_path = (char*)malloc(path_len + strlen(dir->d_name) + 2);
+        if (file_path) {
+          snprintf(file_path, path_len + strlen(dir->d_name) + 2, "%s/%s", path, dir->d_name);
+          if (dir->d_type == DT_DIR) {
+            // Iteratively delete sub directory
+            delete_directory(file_path);
+          } else {
+            // Delete file
+            result = remove(file_path);
+            if (result != 0) {
+              printf("Error deleting file: %s\n", file_path);
+            }
+          }
+          free(file_path);
+        }
+      }
+    }
+    closedir(d);
+  }
+  // Delete directory
+  rmdir(path); 
+}
+
+// Generate file filelist contains information for each part of all files
+// need to sort
+int get_file_list(char *path, const char *filelist) 
+{
+  DIR *dp;
+  struct dirent *ep;
+  char relative[PATH_BUF_SIZE];
+  char real[PATH_BUF_SIZE];
+  struct stat file_stat;
+  FILE *fl = fopen(filelist, "w");
+
+  dp = opendir(path);
+  if (dp != NULL) {
+    while ((ep = readdir (dp)))
+      if(ep->d_name[0] != '.') {  // Except .
+        strcpy(relative, path);
+        strcat(relative, "/");
+        strcat(relative, ep->d_name);
+        realpath(relative, real); // Get real path of the file
+        stat(real, &file_stat);
+        if(S_ISREG(file_stat.st_mode))  // Ignore sub directory and other file
+          count_lines(real, fl);  // Start process of the file
+      }
+    closedir(dp);
+  } else {
+    perror("couldn't open the directory");
+    return -1;
+  }
+
+  fclose(fl);
+
+  return 0;
+}
+
+// Sort all part information in file list_name, and store result in directory dst_dir
+void sort_list(const char *list_name, const char *dst_dir) 
+{
+  ThreadPool pool(THREAD_NUM);
+  FILE *list = fopen(list_name, "r");
+  char line_buffer[LINE_BUF_SIZE];
+  char tmp_file_name[PATH_BUF_SIZE];
+  vector<future<int>> results;
+  fpos_t op;
+
+  pool.init();
+
+  while(fgets(line_buffer, LINE_BUF_SIZE, list)) {
+    long offset = atol(strrchr(line_buffer, '\t') + 1);
+    *strrchr(line_buffer, '\t') = 0;
+    int start_line = atoi(strchr(line_buffer, '\t') + 1);
+    *strchr(line_buffer, '\t') = 0;
+    char name[PATH_BUF_SIZE];
+    strcpy(name, line_buffer);
+    // Get destination file name
+    sprintf(tmp_file_name, "%s/0%s%d", dst_dir, strrchr(name, '/') + 1, start_line);
+    //cout << name << " " << start_line << " " << offset << " " << LINE_GROUPS << " " << tmp_file_name << endl;
+    // Sort each part and write to corresponding destination file prefix with 0
+    results.emplace_back(pool.submit(sort_worker, strdup(name), start_line, offset, LINE_GROUPS, strdup(tmp_file_name)));
+  }
+
+  fclose(list);
+  for(auto && result : results)
+    result.get();
+
+  pool.shutdown();
+}
+
+// Sort lines from start_line(offset) of file name to file dst_name
+int sort_worker(char *name, int start_line, long offset, int lines, char *dst_name) 
+{
+  //cout << name << " " << start_line << " " << offset << " " << lines << " " << dst_name << endl;
+  int data_buffer[lines];
+  char line_buffer[LINE_BUF_SIZE];
+  FILE *data_file = fopen(name, "r");
+  int i;
+
+  if(data_file == NULL) {
+    perror("couldn't open file");
+    return -1;
+  }
+
+  // Nivagate to offset
+  fseek(data_file, offset, SEEK_SET);
+  for(i = 0; i < lines; ++i) {
+    if(!fgets(line_buffer, LINE_BUF_SIZE, data_file))
+      break;
+    data_buffer[i] = atoi(line_buffer);
+  }
+
+  fclose(data_file);
+  // Merge sort the data chunk
+  merge_sort(data_buffer, 0, i);
+  //sort(data_buffer, data_buffer + lines);
+
+  FILE *dst_file = fopen(dst_name, "w");
+  if(dst_file == NULL) {
+    perror("couldn't open file");
+    return -1;
+  }
+
+  // Write the sorted result
+  for(int j = 0; j < i; ++j) {
+    fprintf(dst_file, "%d\n", data_buffer[j]);
+  } 
+
+  fclose(dst_file);
+  free(name); free(dst_name);
+
+  return 0;
+}
+
+// Count how many files prefixed with prefix are there in directory dir_path
+int count_prefix(int prefix, const char *dir_path) 
 {
   DIR *dp;
   struct dirent *ep;
@@ -150,7 +244,7 @@ int count_prefix(int prefix, const char *dir_path)
   dp = opendir(dir_path);
   if(dp != NULL) {
     while((ep = readdir(dp)))
-      if(!strncmp(buffer, ep->d_name, sz))
+      if(!strncmp(buffer, ep->d_name, sz))  // Find the file prefixed with prefix
         ++count;
     closedir(dp);
   } else {
@@ -159,7 +253,66 @@ int count_prefix(int prefix, const char *dir_path)
   return count;
 }
 
-int merge_two_file(char *file1, char *file2, char *output) {
+// There are many sorted files in direcoty dir_path, merge all file prefixed 
+// with prefix to multiple files prefixed with prefix + 1
+char merge_orderd_files(int prefix, const char *dir_path)
+{
+  // If this is only one file prefixed with this prefix, all file has been merged into this file,
+  // that is to say, the final result. return the noly prefix
+  if(count_prefix(prefix, dir_path) <= 1) 
+    return prefix;
+
+  DIR *dp;
+  struct dirent *ep;
+  vector<future<int>> results;
+  char file1[LINE_BUF_SIZE], file2[LINE_BUF_SIZE], output_file[LINE_BUF_SIZE];
+  char buffer[LINE_BUF_SIZE];
+  int i = 1;
+  ThreadPool pool(THREAD_NUM);
+
+  pool.init();
+  dp = opendir(dir_path);
+  sprintf(buffer, "%d", prefix);
+  size_t sz = strlen(buffer);
+
+  if(dp != NULL) {
+    while((ep = readdir(dp))) {
+      if(!strncmp(buffer, ep->d_name, sz)) {
+        if(i % 2) { // Mark the first file
+          sprintf(file1, "%s/%s", dir_path, ep->d_name);
+        } else { // Mark the second file
+          sprintf(file2, "%s/%s", dir_path, ep->d_name);
+          sprintf(output_file, "%s/%d%s", dir_path, prefix + 1, strrchr(file1, '/') + sz + 1);
+          //cout << file1 << ":" << file2 << ":" << output_file << endl;
+          // Merge the first and second file marked before, add the thread to thread pool
+          results.emplace_back(pool.submit(merge_two_file, strdup(file1), strdup(file2), strdup(output_file)));
+        }
+        ++ i;
+      } 
+    }
+    if(i % 2 == 0) {
+      sprintf(output_file, "%s/%d%s", dir_path, prefix + 1, strrchr(file1, '/') + sz + 1);
+      //cout << file1 << "::" << output_file << endl;
+      // If this is a single file, fill another parameter of merge_two_file with NULL
+      results.emplace_back(pool.submit(merge_two_file, strdup(file1), (char*)NULL, strdup(output_file)));
+    }
+    for(auto && result : results)
+      result.get(); // Wait for all sort threads to complete
+    closedir(dp);
+  } else {
+    perror("couldn't open the directory");
+    return -1;
+  }
+
+  // Close pool of this sort
+  pool.shutdown();
+  // Sort operation of this prefix complete, start the sort for next prefix
+  return merge_orderd_files(prefix + 1, dir_path);
+}
+
+// Merge 2 sorted files file1 and file2 to file output
+int merge_two_file(char *file1, char *file2, char *output) 
+{
   char line_buffer1[LINE_BUF_SIZE];
   char line_buffer2[LINE_BUF_SIZE];
   FILE *f1 = fopen(file1, "r");
@@ -191,7 +344,7 @@ int merge_two_file(char *file1, char *file2, char *output) {
   char *s1 = fgets(line_buffer1, LINE_BUF_SIZE, f1);
   char *s2 = fgets(line_buffer2, LINE_BUF_SIZE, f2);
 
-  while(s1 || s2) {
+  while(s1 || s2) { // Ordinary merge operation
     if(!s2 || s1 && atoi(line_buffer1) <= atoi(line_buffer2)) {
       fprintf(fo, "%s", line_buffer1);
       s1 = fgets(line_buffer1, LINE_BUF_SIZE, f1);
@@ -207,152 +360,48 @@ int merge_two_file(char *file1, char *file2, char *output) {
   return 0;
 }
 
-char merge_orderd_files(int prefix, const char *dir_path)
+// Copy the file prefixed with prefix in direcoty path to file dst_name
+void copy_prefix_file(const char *path, int prefix, const char *dst_name) 
 {
-  if(count_prefix(prefix, dir_path) <= 1) 
-    return prefix;
-
   DIR *dp;
   struct dirent *ep;
-  vector<future<int>> results;
-  char file1[LINE_BUF_SIZE], file2[LINE_BUF_SIZE], output_file[LINE_BUF_SIZE];
   char buffer[LINE_BUF_SIZE];
-  int i = 1;
-  ThreadPool pool(THREAD_NUM);
-
-  pool.init();
-  dp = opendir(dir_path);
+  char path_buffer[PATH_BUF_SIZE];
   sprintf(buffer, "%d", prefix);
   size_t sz = strlen(buffer);
+  FILE *dst_file, *src_file;
 
-  if(dp != NULL) {
-    while((ep = readdir(dp))) {
-      if(!strncmp(buffer, ep->d_name, sz)) {
-        if(i % 2) {
-          sprintf(file1, "%s/%s", dir_path, ep->d_name);
-        } else {
-          sprintf(file2, "%s/%s", dir_path, ep->d_name);
-          sprintf(output_file, "%s/%d%s", dir_path, prefix + 1, strrchr(file1, '/') + sz + 1);
-          //cout << file1 << ":" << file2 << ":" << output_file << endl;
-          results.emplace_back(pool.submit(merge_two_file, strdup(file1), strdup(file2), strdup(output_file)));
-        }
-        ++ i;
-      } 
-    }
-    if(i % 2 == 0) {
-      sprintf(output_file, "%s/%d%s", dir_path, prefix + 1, strrchr(file1, '/') + sz + 1);
-      //cout << file1 << "::" << output_file << endl;
-      results.emplace_back(pool.submit(merge_two_file, strdup(file1), (char*)NULL, strdup(output_file)));
-    }
-    for(auto && result : results)
-      result.get();
-    closedir(dp);
-  } else {
-    perror("couldn't open the directory");
-    return -1;
-  }
-
-  pool.shutdown();
-  return merge_orderd_files(prefix + 1, dir_path);
-}
-
-int get_file_list(char *path, const char *filelist) {
-  DIR *dp;
-  struct dirent *ep;
-  char relative[PATH_BUF_SIZE];
-  char real[PATH_BUF_SIZE];
-  struct stat file_stat;
-  FILE *fl = fopen(filelist, "w");
+  if(!path || prefix < 0 || !dst_name)
+    return;
 
   dp = opendir(path);
-  if (dp != NULL) {
-    while ((ep = readdir (dp)))
-      if(ep->d_name[0] != '.') {
-        strcpy(relative, path);
-        strcat(relative, "/");
-        strcat(relative, ep->d_name);
-        realpath(relative, real);
-        stat(real, &file_stat);
-        if(S_ISREG(file_stat.st_mode))
-          count_lines(real, fl);
-      }
-    closedir(dp);
-  } else {
+  if(!dp) {
     perror("couldn't open the directory");
-    return -1;
+    return;
   }
 
-  fclose(fl);
-
-  return 0;
-}
-
-int sort_worker(char *name, int start_line, long offset, int lines, char *dst_name) {
-  //cout << name << " " << start_line << " " << offset << " " << lines << " " << dst_name << endl;
-  int data_buffer[lines];
-  char line_buffer[LINE_BUF_SIZE];
-  FILE *data_file = fopen(name, "r");
-  int i;
-
-  if(data_file == NULL) {
-    perror("couldn't open file");
-    return -1;
+  dst_file = fopen(dst_name, "w");
+  if(!dst_file) {
+    closedir(dp);
+    perror("couldn't open the file");
+    return;
   }
 
-  fseek(data_file, offset, SEEK_SET);
-  for(i = 0; i < lines; ++i) {
-    if(!fgets(line_buffer, LINE_BUF_SIZE, data_file))
+  while((ep = readdir(dp)))
+    if(!strncmp(buffer, ep->d_name, sz)) {  // Find file prefixed with prefix
+      sprintf(path_buffer, "%s/", path);
+      strcat(path_buffer, ep->d_name);
+      src_file = fopen(path_buffer, "r");
+      if(src_file) {
+        while (fgets(buffer, LINE_BUF_SIZE, src_file) != NULL)  // Copy to file dst_name
+          fprintf(dst_file, "%s", buffer);
+        fclose(src_file);
+      }
       break;
-    data_buffer[i] = atoi(line_buffer);
-  }
+    }
 
-  fclose(data_file);
-  merge_sort(data_buffer, 0, i);
-  //sort(data_buffer, data_buffer + lines);
-
-  FILE *dst_file = fopen(dst_name, "w");
-  if(dst_file == NULL) {
-    perror("couldn't open file");
-    return -1;
-  }
-
-  for(int j = 0; j < i; ++j) {
-    fprintf(dst_file, "%d\n", data_buffer[j]);
-  } 
-
+  closedir(dp);
   fclose(dst_file);
-  free(name); free(dst_name);
-
-  return 0;
-}
-
-void sort_list(const char *list_name, const char *dst_dir) {
-  ThreadPool pool(THREAD_NUM);
-  FILE *list = fopen(list_name, "r");
-  char line_buffer[LINE_BUF_SIZE];
-  char tmp_file_name[PATH_BUF_SIZE];
-  vector<future<int>> results;
-  fpos_t op;
-
-  pool.init();
-
-  while(fgets(line_buffer, LINE_BUF_SIZE, list)) {
-    long offset = atol(strrchr(line_buffer, '\t') + 1);
-    *strrchr(line_buffer, '\t') = 0;
-    int start_line = atoi(strchr(line_buffer, '\t') + 1);
-    *strchr(line_buffer, '\t') = 0;
-    char name[PATH_BUF_SIZE];
-    strcpy(name, line_buffer);
-    sprintf(tmp_file_name, "%s/0%s%d", dst_dir, strrchr(name, '/') + 1, start_line);
-    //cout << name << " " << start_line << " " << offset << " " << LINE_GROUPS << " " << tmp_file_name << endl;
-    results.emplace_back(pool.submit(sort_worker, strdup(name), start_line, offset, LINE_GROUPS, strdup(tmp_file_name)));
-  }
-
-  fclose(list);
-  for(auto && result : results)
-    result.get();
-
-  pool.shutdown();
 }
 
 int main(int argc, char *argv[])
