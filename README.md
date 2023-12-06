@@ -7,7 +7,7 @@
 ```
 ./gen_test.sh 10000             #在test文件夹生成一定规模的测试数据
 g++ -pthread *.cpp -o sort      #编译源码
-./sort test/                    #排序
+./sort test/ sorted.txt         #排序
 ```
 输出：
 ```
@@ -16,7 +16,6 @@ g++ -pthread *.cpp -o sort      #编译源码
 3. create tmp dir: /tmp/sort.
 4. sort file chunk in /tmp/sort.
 5. sort partial sorted file chunk.
-9      #最终结果存在/tmp/sort文件夹下前缀为这一行的数字的文件里，此处为9意为总计归并了9次
-6. copy result to sorted.txt.   #TODO
+6. copy result to sorted.txt.
 ```
 
