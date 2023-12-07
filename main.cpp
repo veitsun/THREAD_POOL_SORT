@@ -60,31 +60,6 @@ void merge_sort(int * a, int beg, int end)
   merge(a, beg, med, end);
 }
 
-// Cont line and offset of file filename, and write record to filelist
-int count_lines(char *filename, FILE *filelist) 
-{
-  FILE *file = fopen(filename, "r");
-  if (file == NULL) {
-    perror("unable to open file");
-    return -1;
-  }
-
-  int lines = 0;
-  char buffer[LINE_BUF_SIZE];
-  long offset = ftell(file);
-
-  while (fgets(buffer, LINE_BUF_SIZE, file) != NULL) {
-    if(!(lines % LINE_GROUPS)) {  // Write the record every serval line meanwhile 
-                                  // separate the file to line chunks
-      fprintf(filelist, "%s\t%d\t%ld\n", filename, lines, offset);  // Write the record
-    }
-    lines++;
-    offset = ftell(file); // Obtain offset of current position
-  }
-  fclose(file);
-  return lines;
-}
-
 // Delete a directory and all files in it
 void delete_directory(const char *path) 
 {
@@ -152,6 +127,31 @@ int get_file_list(char *path, const char *filelist)
   fclose(fl);
 
   return 0;
+}
+
+// Cont line and offset of file filename, and write record to filelist
+int count_lines(char *filename, FILE *filelist) 
+{
+  FILE *file = fopen(filename, "r");
+  if (file == NULL) {
+    perror("unable to open file");
+    return -1;
+  }
+
+  int lines = 0;
+  char buffer[LINE_BUF_SIZE];
+  long offset = ftell(file);
+
+  while (fgets(buffer, LINE_BUF_SIZE, file) != NULL) {
+    if(!(lines % LINE_GROUPS)) {  // Write the record every serval line meanwhile 
+                                  // separate the file to line chunks
+      fprintf(filelist, "%s\t%d\t%ld\n", filename, lines, offset);  // Write the record
+    }
+    lines++;
+    offset = ftell(file); // Obtain offset of current position
+  }
+  fclose(file);
+  return lines;
 }
 
 // Sort all part information in file list_name, and store result in directory dst_dir
@@ -255,7 +255,7 @@ int count_prefix(int prefix, const char *dir_path)
 
 // There are many sorted files in direcoty dir_path, merge all file prefixed 
 // with prefix to multiple files prefixed with prefix + 1
-char merge_orderd_files(int prefix, const char *dir_path)
+int merge_orderd_files(int prefix, const char *dir_path)
 {
   // If this is only one file prefixed with this prefix, all file has been merged into this file,
   // that is to say, the final result. return the noly prefix
