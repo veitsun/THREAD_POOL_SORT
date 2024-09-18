@@ -1,7 +1,7 @@
-#ifndef func_c_girl_h
-#define func_c_girl_h
+#ifndef CGemmWithC_H
+#define CGemmWithC_H
 
-class func_c_girl {
+class CGemmWithC {
 private:
 
 public:
