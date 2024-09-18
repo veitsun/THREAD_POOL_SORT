@@ -22,7 +22,7 @@ def save_random_floats_to_file(random_floats, filename):
         for num in random_floats:
             file.write(f"{num}\n")
 
-n = 10  # 生成 10 个随机浮点数
+n = 25  # 生成 10 个随机浮点数
 filename = "../src/random_numbers.txt"  # 输出文件名
 
 # 生成随机浮点数

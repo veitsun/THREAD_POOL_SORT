@@ -1,5 +1,7 @@
-add_library(func_c_girl STATIC func_c_girl.cpp)
+add_library(CMatrixData STATIC CMatrixData.cpp)
+add_library(CGemmWithC STATIC CGemmWithC.cpp)
 
 add_executable(main main.cpp)
 
-target_link_libraries(main PRIVATE func_c_girl)
+target_link_libraries(main PRIVATE CMatrixData)
+target_link_libraries(main PRIVATE CGemmWithC)
