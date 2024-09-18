@@ -61,5 +61,10 @@ void CMatrixData::show() {
             std::cout << std::endl;
         }
     }
+    std::cout << std::endl;
+}
+
+std::vector<float>& CMatrixData::getdata() {
+    return this->data;
 }
 

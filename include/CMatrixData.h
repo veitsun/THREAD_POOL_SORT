@@ -21,6 +21,7 @@ private:
 public:
     CMatrixData(int m, int n);
     ~CMatrixData();
+    std::vector<float>& getdata();
     void createData();  // 生成矩阵的信息
     void read_file(const std::string& filename, std::vector<float>& data); // 读取文件数据
     float string_to_float(const std::string& str);
