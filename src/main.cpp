@@ -13,6 +13,8 @@ void convert_vector_to_pointer(const std::vector<float>& vec, float* ptr) {
 }
 
 int main(int argc , char ** argv){
+
+	/*
 	// M , N , K, aplha , A, B, beta, C
 	CGemmWithC girl;
 	CMatrixData matrixdataA(5, 5);
@@ -43,5 +45,8 @@ int main(int argc , char ** argv){
 	delete[] A;
 	delete[] B;
 	delete[] C;
+	*/
+
+	
 	return 0;
 }
