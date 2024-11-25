@@ -29,7 +29,7 @@ int count_lines(char *filename, FILE *filelist);
 int get_file_list(char *path, const char *filelist);
 int merge_two_file(char *file1, char *file2, char *output);
 int count_prefix(int prefix, const char *dir_path);
-char merge_orderd_files(int prefix, const char *dir_path);
+int merge_orderd_files(int prefix, const char *dir_path);
 int sort_worker(char *name, int start_line, long offset, int lines, char *dst_name);
 void sort_list(const char *list_name, const char *dst_dir);
 
