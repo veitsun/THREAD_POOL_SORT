@@ -12,17 +12,17 @@ class ThreadPool {
 private:
   class ThreadWorker {
   private:
-    int m_id;
     ThreadPool *m_pool;
+    int m_id;
 
   public:
     ThreadWorker(ThreadPool *pool, const int id);
     void operator()();
   };
 
+  std::vector<std::thread> m_threads;
   bool m_shutdown;
   SafeQueue<std::function<void()>> m_queue;
-  std::vector<std::thread> m_threads;
   std::mutex m_conditional_mutex;
   std::condition_variable m_conditional_lock;
 

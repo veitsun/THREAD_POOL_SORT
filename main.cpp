@@ -48,7 +48,7 @@ void merge(int *a, int beg, int med, int end) {
   int temp[sz];
   int i = 0;
   while (left < med || right < end) {
-    if (right >= end || left < med && a[left] < a[right])
+    if ((right >= end) || (left < med && a[left] < a[right]))
       temp[i++] = a[left++];
     else
       temp[i++] = a[right++];
@@ -411,7 +411,7 @@ int merge_two_file(char *file1, char *file2, char *output) {
   char *s2 = fgets(line_buffer2, LINE_BUF_SIZE, f2);
 
   while (s1 || s2) { // Ordinary merge operation
-    if (!s2 || s1 && atoi(line_buffer1) <= atoi(line_buffer2)) {
+    if ((!s2) || (s1 && atoi(line_buffer1) <= atoi(line_buffer2))) {
       fprintf(fo, "%s", line_buffer1);
       s1 = fgets(line_buffer1, LINE_BUF_SIZE, f1);
     } else {
