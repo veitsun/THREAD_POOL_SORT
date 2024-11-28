@@ -1,3 +1,10 @@
+# 执行过程
+```
+./gen_test.sh 10000
+./build/main ./test/ sorted.txt
+
+```
+
 # get_file_list
 
 这个函数的作用是遍历指定目录中的所有文件，并对每个文件执行一些操作：

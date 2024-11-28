@@ -40,6 +40,6 @@ replay: clean config build
 play: config build
 
 runmain:
-	@./build/main
+	@./build/main ./test/ sorted.txt
 
 .PHONY: all config build clean rebuild
