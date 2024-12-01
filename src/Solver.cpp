@@ -1,6 +1,6 @@
-#include "../include/Solver.h"
-#include "../include/BaseSolver.h"
-#include "../include/ThreadPool.h"
+#include "Solver.h"
+#include "BaseSolver.h"
+#include "ThreadPool.h"
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -80,6 +80,7 @@ void Solver::delete_directory(const char *path) {
 }
 
 void Solver::sort_list(const char *list_name, const char *dst_dir) {
+  //  solver.sort_list("./filelist.txt", "./sort_test");
   ThreadPool pool(4);
   // 打开文件列表
   FILE *list = fopen(list_name, "r");
@@ -111,6 +112,7 @@ void Solver::sort_list(const char *list_name, const char *dst_dir) {
             start_line);
     // 提交排序任务到线程池， 使用sort_worker作为工作线程
     // 参数有， name，开始行号，地址偏移量，100分组，临时文件名
+    // strdup
     results.emplace_back(pool.submit(BaseSolver::sort_worker, strdup(name),
                                      start_line, offset, 100,
                                      strdup(temp_file_name)));

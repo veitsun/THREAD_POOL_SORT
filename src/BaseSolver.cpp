@@ -1,5 +1,5 @@
-#include "../include/BaseSolver.h"
-#include "../include/CMergeSort.h"
+#include "BaseSolver.h"
+#include "CMergeSort.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

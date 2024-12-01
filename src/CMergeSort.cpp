@@ -1,4 +1,4 @@
-#include "../include/CMergeSort.h"
+#include "CMergeSort.h"
 #include <cstddef>
 #include <cstring>
 

@@ -3,7 +3,6 @@
 #include <functional>
 #include <future>
 #include <mutex>
-#include <queue>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -22,19 +21,19 @@ private:
 
   std::vector<std::thread> m_threads;
   bool m_shutdown;
-  SafeQueue<std::function<void()>> m_queue;
-  std::mutex m_conditional_mutex;
-  std::condition_variable m_conditional_lock;
+  SafeQueue<std::function<void()>> m_queue;   //
+  std::mutex m_conditional_mutex;             // 线程同步锁
+  std::condition_variable m_conditional_lock; // 线程同步的条件变量
 
 public:
   ThreadPool(const int n_threads);
   ~ThreadPool() { shutdown(); }
 
-  // Prevent copying and moving
-  ThreadPool(const ThreadPool &) = delete;
-  ThreadPool(ThreadPool &&) = delete;
-  ThreadPool &operator=(const ThreadPool &) = delete;
-  ThreadPool &operator=(ThreadPool &&) = delete;
+  // // Prevent copying and moving
+  // ThreadPool(const ThreadPool &) = delete;
+  // ThreadPool(ThreadPool &&) = delete;
+  // ThreadPool &operator=(const ThreadPool &) = delete;
+  // ThreadPool &operator=(ThreadPool &&) = delete;
 
   void init();
   void shutdown();
